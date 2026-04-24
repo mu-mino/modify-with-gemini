@@ -1,8 +1,9 @@
+
 # Tafsir GUI — Universal Semantic Annotation Pipeline
 
 A universal pipeline for semantic annotation, classification, and rendering of entire books via a NiceGUI wizard and a FastAPI viewer.
 
-Originally built for the [Tafsir pipeline](https://github.com/muhammed-emin-eser/classify) — a project for annotating Islamic Quranic exegesis (Tafsir) texts using Gemini. This repo generalises that pipeline so any structured book (SQLite-backed) can be annotated, reviewed, and rendered.
+Originally built for the [Tafsir pipeline](https://github.com/mu-mino/Auto-Classify-Hadiths) — a project for annotating Islamic Quranic exegesis (Tafsir) texts using Gemini. This repo generalises that pipeline so any structured book (SQLite-backed) can be annotated, reviewed, and rendered.
 
 ---
 
@@ -21,6 +22,7 @@ Originally built for the [Tafsir pipeline](https://github.com/muhammed-emin-eser
 
 ## Showcase legacy version : Annotated UI
 
+<img width="1800" height="1200" alt="output" src="https://github.com/user-attachments/assets/4247c60c-d402-48bc-85ec-f10aa1e2d710" />
 
 ---
 
