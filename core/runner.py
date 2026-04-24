@@ -222,7 +222,7 @@ class PipelineRunner:
 
         client = self.gemini_factory.create(api_key=ctx.api_key or "", cache_name=ctx.cache_name, model_id=ctx.model_id)
         prompt = (
-            "You are deriving structural rules for a tafsir corpus. "
+            "You are deriving structural rules for a document corpus. "
             "Inspect the following excerpt and summarise the structural markers and table fields "
             "needed to store it safely:\n\n"
             f"{sample}\n\nReturn a concise bullet list."

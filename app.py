@@ -33,7 +33,7 @@ from tafsir_gui.app_vars import (
 
 ANNOTATED_DIR = cfg.ANNOTATED_DIR
 SOURCE_DIR = cfg.BOOKS_DIR
-DEFAULT_TAFSIR = cfg.DEFAULT_TAFSIR
+DEFAULT_BOOK = cfg.DEFAULT_BOOK
 
 # Optional explicit defaults (used when auto-discovery finds nothing)
 ANNOTATED_DB_PATH = os.getenv(
@@ -47,7 +47,7 @@ SOURCE_TABLE = os.getenv("SOURCE_TABLE", "katheer")
 
 
 @dataclass(frozen=True)
-class TafsirConfig:
+class BookConfig:
     key: str
     annotated_db: str
     annotated_table: str
@@ -57,7 +57,7 @@ class TafsirConfig:
     source_table: str
 
 
-def discover_tafsir_configs() -> Dict[str, TafsirConfig]:
+def discover_book_configs() -> Dict[str, BookConfig]:
     """
     Auto-discover annotated tafsir databases and wire them to their source DBs.
     Naming convention:
@@ -68,7 +68,7 @@ def discover_tafsir_configs() -> Dict[str, TafsirConfig]:
       source DB: Tafsir/tafsir_books/<name>.sqlite3
       source table: <name>
     """
-    configs: Dict[str, TafsirConfig] = {}
+    configs: Dict[str, BookConfig] = {}
 
     if ANNOTATED_DIR.exists():
         for path in ANNOTATED_DIR.glob("*_annotated.sqlite3"):
@@ -82,7 +82,7 @@ def discover_tafsir_configs() -> Dict[str, TafsirConfig]:
             if not key or key in configs:
                 continue
             source_db = SOURCE_DIR / f"{key}.sqlite3"
-            configs[key] = TafsirConfig(
+            configs[key] = BookConfig(
                 key=key,
                 annotated_db=str(path),
                 annotated_table=f"tafsir_analysis_{base}",
@@ -94,8 +94,8 @@ def discover_tafsir_configs() -> Dict[str, TafsirConfig]:
 
     if not configs:
         # Fallback to explicit env/config defaults (keeps app bootable during setup).
-        fallback_key = DEFAULT_TAFSIR.lower()
-        configs[fallback_key] = TafsirConfig(
+        fallback_key = DEFAULT_BOOK.lower()
+        configs[fallback_key] = BookConfig(
             key=fallback_key,
             annotated_db=ANNOTATED_DB_PATH,
             annotated_table=ANNOTATED_TABLE,
@@ -240,8 +240,8 @@ def render_xml_text(
 # ---------------- Data layer ----------------
 
 
-class TafsirRepository:
-    def __init__(self, cfg: TafsirConfig):
+class BookRepository:
+    def __init__(self, cfg: BookConfig):
         self.cfg = cfg
         self.annotated_conn = sqlite3.connect(cfg.annotated_db, check_same_thread=False)
         self.annotated_conn.row_factory = sqlite3.Row
@@ -492,7 +492,7 @@ class TafsirRepository:
             "id": global_id,
             "mode": mode,
             "filter": list(allowed_tags) if allowed_tags else [],
-            "tafsir": self.cfg.key,
+            "book": self.cfg.key,
             "content_plain": plain_text,
             "content_html": rendered_html,
             "tags": tags_used,
@@ -639,13 +639,13 @@ class TafsirRepository:
         return record
 
 
-class TafsirManager:
-    def __init__(self, configs: Dict[str, TafsirConfig], default_key: str):
+class BookManager:
+    def __init__(self, configs: Dict[str, BookConfig], default_key: str):
         if not configs:
             raise RuntimeError("No tafsir configurations available")
         self.configs = configs
         self.default = default_key if default_key in configs else next(iter(configs))
-        self._repos: Dict[str, TafsirRepository] = {}
+        self._repos: Dict[str, BookRepository] = {}
 
     def list_keys(self) -> List[str]:
         return sorted(self.configs.keys())
@@ -657,12 +657,12 @@ class TafsirManager:
         if key == "all":
             return self.list_keys()
         if key not in self.configs:
-            raise HTTPException(status_code=400, detail=f"Unknown tafsir '{key}'")
+            raise HTTPException(status_code=400, detail=f"Unknown book '{key}'")
         return [key]
 
-    def _repo(self, key: str) -> TafsirRepository:
+    def _repo(self, key: str) -> BookRepository:
         if key not in self._repos:
-            self._repos[key] = TafsirRepository(self.configs[key])
+            self._repos[key] = BookRepository(self.configs[key])
         return self._repos[key]
 
     def close(self) -> None:
@@ -691,7 +691,7 @@ class TafsirManager:
             palette.update(data.get("palette") or {})
             combined_results.extend(data.get("results") or [])
 
-        combined_results.sort(key=lambda r: (r.get("id", 0), r.get("tafsir", "")))
+        combined_results.sort(key=lambda r: (r.get("id", 0), r.get("book", "")))
         sliced = combined_results[offset : offset + limit]
 
         return {
@@ -705,7 +705,7 @@ class TafsirManager:
             "total": total,
             "palette": palette,
             "results": sliced,
-            "tafsir": keys if len(keys) > 1 else keys[0],
+            "book": keys if len(keys) > 1 else keys[0],
         }
 
     def columns_for(self, keys: List[str]) -> Set[str]:
@@ -717,17 +717,17 @@ class TafsirManager:
     def jump_to(
         self,
         *,
-        tafsir: Optional[str],
+        book: Optional[str],
         surah: int,
         ayah: Optional[int],
         filter_key: Optional[str],
         mode: str,
         highlight: bool,
     ) -> Dict[str, object]:
-        keys = self._select_keys(tafsir)
+        keys = self._select_keys(book)
         if len(keys) != 1:
             raise HTTPException(
-                status_code=400, detail="Select a single tafsir when jumping to a verse"
+                status_code=400, detail="Select a single book when jumping to a verse"
             )
 
         key = keys[0]
@@ -742,14 +742,14 @@ class TafsirManager:
             mode=mode,
             highlight=highlight,
         )
-        record["tafsir"] = key
-        record["available_tafsirs"] = self.list_keys()
+        record["book"] = key
+        record["available_books"] = self.list_keys()
         return record
 
     def search(
         self,
         *,
-        tafsir: Optional[str],
+        book: Optional[str],
         query: str,
         limit: int,
         offset: int,
@@ -757,7 +757,7 @@ class TafsirManager:
         mode: str,
         highlight: bool,
     ) -> Dict[str, object]:
-        keys = self._select_keys(tafsir)
+        keys = self._select_keys(book)
         if len(keys) == 1:
             data = self._repo(keys[0]).search(
                 query=query,
@@ -767,8 +767,8 @@ class TafsirManager:
                 mode=mode,
                 highlight=highlight,
             )
-            data["tafsir"] = keys[0]
-            data["available_tafsirs"] = self.list_keys()
+            data["book"] = keys[0]
+            data["available_books"] = self.list_keys()
             return data
         data = self._aggregate(
             "search",
@@ -780,20 +780,20 @@ class TafsirManager:
             mode=mode,
             highlight=highlight,
         )
-        data["available_tafsirs"] = self.list_keys()
+        data["available_books"] = self.list_keys()
         return data
 
     def browse(
         self,
         *,
-        tafsir: Optional[str],
+        book: Optional[str],
         limit: int,
         offset: int,
         filter_key: Optional[str],
         mode: str,
         highlight: bool,
     ) -> Dict[str, object]:
-        keys = self._select_keys(tafsir)
+        keys = self._select_keys(book)
         if len(keys) == 1:
             data = self._repo(keys[0]).browse(
                 limit=limit,
@@ -802,8 +802,8 @@ class TafsirManager:
                 mode=mode,
                 highlight=highlight,
             )
-            data["tafsir"] = keys[0]
-            data["available_tafsirs"] = self.list_keys()
+            data["book"] = keys[0]
+            data["available_books"] = self.list_keys()
             return data
         data = self._aggregate(
             "browse",
@@ -814,19 +814,19 @@ class TafsirManager:
             mode=mode,
             highlight=highlight,
         )
-        data["available_tafsirs"] = self.list_keys()
+        data["available_books"] = self.list_keys()
         return data
 
     def get_one(
         self,
         *,
-        tafsir: Optional[str],
+        book: Optional[str],
         global_id: int,
         filter_key: Optional[str],
         mode: str,
         highlight: bool,
     ) -> Dict[str, object]:
-        keys = self._select_keys(tafsir)
+        keys = self._select_keys(book)
         last_exc: Optional[Exception] = None
         for key in keys:
             try:
@@ -836,8 +836,8 @@ class TafsirManager:
                     mode=mode,
                     highlight=highlight,
                 )
-                data["tafsir"] = key
-                data["available_tafsirs"] = self.list_keys()
+                data["book"] = key
+                data["available_books"] = self.list_keys()
                 return data
             except HTTPException as exc:
                 last_exc = exc
@@ -849,7 +849,7 @@ class TafsirManager:
 
 # ---------------- FastAPI setup ----------------
 
-app = FastAPI(title="Tafsir XML Search API", version="2.0.0")
+app = FastAPI(title="Book Annotation Viewer API", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -857,14 +857,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-TAFSIR_CONFIGS = discover_tafsir_configs()
-tafsir_manager = TafsirManager(TAFSIR_CONFIGS, default_key=DEFAULT_TAFSIR.lower())
+BOOK_CONFIGS = discover_book_configs()
+book_manager = BookManager(BOOK_CONFIGS, default_key=DEFAULT_BOOK.lower())
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 if STATIC_DIR.is_dir():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-logger = logging.getLogger("tafsir")
+logger = logging.getLogger("annotation_app")
 logging.basicConfig(level=logging.INFO)
 
 
@@ -887,11 +887,11 @@ async def root():
 
 @app.get("/health")
 async def health():
-    default_repo = tafsir_manager._repo(tafsir_manager.default)
+    default_repo = book_manager._repo(book_manager.default)
     return {
         "status": "ok",
-        "default_tafsir": tafsir_manager.default,
-        "available_tafsirs": tafsir_manager.list_keys(),
+        "default_book": book_manager.default,
+        "available_books": book_manager.list_keys(),
         "annotated_db": default_repo.cfg.annotated_db,
         "source_db": default_repo.cfg.source_db,
         "annotated_table": default_repo.cfg.annotated_table,
@@ -918,10 +918,10 @@ def _validate_filter(
     mapped = FILTER_ALIASES.get(key)
     if mapped is None:
         raise HTTPException(status_code=400, detail="Invalid filter")
-    available_cols = tafsir_manager.columns_for(selection_keys)
+    available_cols = book_manager.columns_for(selection_keys)
     if mapped not in available_cols:
         raise HTTPException(
-            status_code=400, detail="Filter not available for selected tafsir"
+            status_code=400, detail="Filter not available for selected book"
         )
     return mapped
 
@@ -946,14 +946,14 @@ async def api_search(
     mode: str = Query("full"),
     filter: Optional[str] = Query(None, alias="filter"),
     highlight: bool = Query(True),
-    tafsir: Optional[str] = Query(None),
+    book: Optional[str] = Query(None),
 ):
     mode = _validate_mode(mode)
-    selection_keys = tafsir_manager._select_keys(tafsir)
+    selection_keys = book_manager._select_keys(book)
     filter_key = _validate_filter(filter, selection_keys)
     try:
-        return tafsir_manager.search(
-            tafsir=tafsir,
+        return book_manager.search(
+            book=book,
             query=q,
             limit=limit,
             offset=offset,
@@ -972,13 +972,13 @@ async def api_browse(
     mode: str = Query("full"),
     filter: Optional[str] = Query(None, alias="filter"),
     highlight: bool = Query(True),
-    tafsir: Optional[str] = Query(None),
+    book: Optional[str] = Query(None),
 ):
     mode = _validate_mode(mode)
-    selection_keys = tafsir_manager._select_keys(tafsir)
+    selection_keys = book_manager._select_keys(book)
     filter_key = _validate_filter(filter, selection_keys)
-    return tafsir_manager.browse(
-        tafsir=tafsir,
+    return book_manager.browse(
+        book=book,
         limit=limit,
         offset=offset,
         filter_key=filter_key,
@@ -993,13 +993,13 @@ async def api_get_one(
     mode: str = Query("full"),
     filter: Optional[str] = Query(None, alias="filter"),
     highlight: bool = Query(True),
-    tafsir: Optional[str] = Query(None),
+    book: Optional[str] = Query(None),
 ):
     mode = _validate_mode(mode)
-    selection_keys = tafsir_manager._select_keys(tafsir)
+    selection_keys = book_manager._select_keys(book)
     filter_key = _validate_filter(filter, selection_keys)
-    return tafsir_manager.get_one(
-        tafsir=tafsir,
+    return book_manager.get_one(
+        book=book,
         global_id=global_id,
         filter_key=filter_key,
         mode=mode,
@@ -1014,14 +1014,14 @@ async def api_jump(
     mode: str = Query("full"),
     filter: Optional[str] = Query(None, alias="filter"),
     highlight: bool = Query(True),
-    tafsir: Optional[str] = Query(None),
+    book: Optional[str] = Query(None),
 ):
     mode = _validate_mode(mode)
-    selection_keys = tafsir_manager._select_keys(tafsir)
+    selection_keys = book_manager._select_keys(book)
     filter_key = _validate_filter(filter, selection_keys)
     surah_num, ayah_num = _validate_surah_ayah(surah, ayah)
-    return tafsir_manager.jump_to(
-        tafsir=tafsir,
+    return book_manager.jump_to(
+        book=book,
         surah=surah_num,
         ayah=ayah_num,
         filter_key=filter_key,
@@ -1032,7 +1032,7 @@ async def api_jump(
 
 @app.on_event("shutdown")
 def _shutdown():
-    tafsir_manager.close()
+    book_manager.close()
 
 
 # Gunicorn/Uvicorn entrypoint helper:

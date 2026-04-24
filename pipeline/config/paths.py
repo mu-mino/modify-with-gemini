@@ -8,13 +8,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]  # tafsir_gui/
 REPO_ROOT = PROJECT_ROOT.parent
 
 # Centralized directories (override via environment if needed)
-BOOKS_DIR = Path(os.getenv("SOURCE_DIR", PROJECT_ROOT / "tafsir_books"))
-ANNOTATED_DIR = Path(os.getenv("ANNOTATED_DIR", PROJECT_ROOT / "tafsir_books_annotated"))
+BOOKS_DIR = Path(os.getenv("SOURCE_DIR", PROJECT_ROOT / "books"))
+ANNOTATED_DIR = Path(os.getenv("ANNOTATED_DIR", PROJECT_ROOT / "books_annotated"))
 LOGS_DIR = Path(os.getenv("LOGS_DIR", PROJECT_ROOT / "logs"))
 CONFIG_DIR = Path(os.getenv("CONFIG_DIR", PROJECT_ROOT / "config"))
 
-# Defaults for tafsir selection
-DEFAULT_TAFSIR = os.getenv("DEFAULT_TAFSIR", "katheer")
+DEFAULT_BOOK = os.getenv("DEFAULT_BOOK", os.getenv("DEFAULT_TAFSIR", "default"))
 
 # Ensure commonly-used directories exist (no-op if already present)
 for _path in (LOGS_DIR, CONFIG_DIR):

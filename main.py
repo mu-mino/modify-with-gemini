@@ -48,8 +48,8 @@ from tafsir_gui.utils.logging import configure_logging
 
 @dataclass
 class GUIState:
-    project_name: str = "tafsir_gui_run"
-    output_dir: Path = env_utils.REPO_ROOT / "tools" / "tafsir_gui" / "projects"
+    project_name: str = "my_project"
+    output_dir: Path = env_utils.REPO_ROOT / "projects"
     api_key: str = os.getenv("GEMINI_API_KEY", "")
     cache_name: str | None = os.getenv("GEMINI_CACHE_NAME", None)
     model_id: str = os.getenv("GEMINI_MODEL_ID", "models/gemini-2.5-pro")
@@ -62,7 +62,7 @@ class GUIState:
     file_preview: object | None = None
     mode: str = "legacy"
     api_key_status: str = "Unknown"
-    gcp_project_name: str = "tafsir_gui_run"
+    gcp_project_name: str = "my_project"
     billing_country: str = ""
     org_folder: str = ""
     gcp_checklist: dict = field(default_factory=dict)
@@ -689,7 +689,7 @@ def build_ui(test_mode: bool = False):
 
             bus.subscribe(_bus_listener)
 
-    ui.run(title="Tafsir GUI", reload=False)
+    ui.run(title="Annotation Pipeline", reload=False)
 
 
 @app.on_shutdown

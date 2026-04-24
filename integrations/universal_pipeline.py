@@ -46,7 +46,7 @@ def infer_blueprint(
     client: GeminiClient, samples: List[str]
 ) -> Tuple[Dict, str, Dict, Dict, Dict]:
     prompt = (
-        "You are a data architect and pipeline engineer for the Tafsir project. Analyze the samples "
+        "You are a data architect and pipeline engineer. Analyze the samples "
         "and infer a portable schema plus validation/repair strategy that fits the current architecture:\n"
         "- Data enters as raw excerpts, is normalized against a shared Arabic normalization routine, "
         "and is stored in SQLite tables under the `annotated` directory.\n"

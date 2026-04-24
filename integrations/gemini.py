@@ -122,7 +122,7 @@ class GeminiClient:
             cache = client.caches.create(
                 model=self.model_id,
                 config=types.CreateCachedContentConfig(
-                    display_name="Tafsir_GUI_Cache",
+                    display_name="AnnotationPipeline_Cache",
                     system_instruction=prompt_prefix,
                     contents=[prompt_prefix],
                     ttl=ttl,

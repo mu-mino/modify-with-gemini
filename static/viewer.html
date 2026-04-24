@@ -460,8 +460,8 @@
             placeholder="Search annotated XML…"
             autocomplete="off"
           />
-          <select id="tafsirSelect">
-            <option value="">Default tafsir</option>
+          <select id="bookSelect">
+            <option value="">All books</option>
             <option value="all">All tafasir</option>
           </select>
           <select id="modeSelect">
@@ -527,8 +527,8 @@
         query: "",
         mode: "full",
         filter: "",
-        tafsir: "",
-        availableTafsirs: [],
+        book: "",
+        availableBooks: [],
         highlight: true,
         offset: 0,
         total: 0,
@@ -548,7 +548,7 @@
       const loadMoreBtn = document.getElementById("loadMore");
       const modeSelect = document.getElementById("modeSelect");
       const filterSelect = document.getElementById("filterSelect");
-      const tafsirSelect = document.getElementById("tafsirSelect");
+      const bookSelect = document.getElementById("bookSelect");
       const toggleHighlight = document.getElementById("toggleHighlight");
       const searchBtn = document.getElementById("searchBtn");
       const browseBtn = document.getElementById("browseBtn");
@@ -683,24 +683,24 @@
           ? defaultKey[0]
           : defaultKey;
         const keys = Array.isArray(list) ? list : [];
-        tafsirSelect.innerHTML = "";
+        bookSelect.innerHTML = "";
 
         const allOpt = document.createElement("option");
         allOpt.value = "all";
         allOpt.textContent = "All tafasir";
-        tafsirSelect.appendChild(allOpt);
+        bookSelect.appendChild(allOpt);
 
         keys.forEach((key) => {
           const opt = document.createElement("option");
           opt.value = key;
           opt.textContent = key;
-          tafsirSelect.appendChild(opt);
+          bookSelect.appendChild(opt);
         });
 
         const desired =
-          state.tafsir || defaultValue || (keys.length ? keys[0] : "all");
-        state.tafsir = desired;
-        tafsirSelect.value = desired;
+          state.book || defaultValue || (keys.length ? keys[0] : "all");
+        state.book = desired;
+        bookSelect.value = desired;
       }
 
       function buildCard(item) {
@@ -715,11 +715,11 @@
         modeBadge.textContent = `Mode: ${item.mode}`;
         meta.appendChild(modeBadge);
 
-        if (item.tafsir) {
-          const tafsirBadge = document.createElement("span");
-          tafsirBadge.className = "badge";
-          tafsirBadge.textContent = `Tafsir: ${item.tafsir}`;
-          meta.appendChild(tafsirBadge);
+        if (item.book) {
+          const bookBadge = document.createElement("span");
+          bookBadge.className = "badge";
+          bookBadge.textContent = `Book: ${item.book}`;
+          meta.appendChild(bookBadge);
         }
 
         if (item.sura_number) {
@@ -815,14 +815,14 @@
           highlight: true, // always fetch with highlight so we can toggle client-side
         });
         if (state.filter) params.set("filter", state.filter);
-        if (state.tafsir) params.set("tafsir", state.tafsir);
+        if (state.book) params.set("book", state.book);
         if (state.query.trim()) params.set("q", state.query.trim());
 
         try {
           const data = await fetchJSON(`${API_BASE}${endpoint}?${params}`);
-          if (Array.isArray(data.available_tafsirs)) {
-            state.availableTafsirs = data.available_tafsirs;
-            setTafsirOptions(data.available_tafsirs, data.tafsir);
+          if (Array.isArray(data.available_books)) {
+            state.availableBooks = data.available_books;
+            setTafsirOptions(data.available_books, data.book);
           }
           state.total = data.total ?? 0;
           state.palette = reset
@@ -840,7 +840,7 @@
           setStatus(
             `${state.results.length} / ${state.total || "?"} loaded — Mode: ${state.mode} | ${
               state.query ? "Search" : "Browse"
-            } | Tafsir: ${state.tafsir || "default"}${
+            } | Tafsir: ${state.book || "default"}${
               state.filter ? ` | Filter: ${state.filter}` : ""
             }`,
           );
@@ -950,7 +950,7 @@
         });
         if (ayahVal) params.set("ayah", ayahVal);
         if (state.filter) params.set("filter", state.filter);
-        if (state.tafsir) params.set("tafsir", state.tafsir);
+        if (state.book) params.set("book", state.book);
 
         try {
           const data = await fetchJSON(`${API_BASE}/api/jump?${params}`);
@@ -995,8 +995,8 @@
         applyModeLockForFilter();
         loadData(true);
       });
-      tafsirSelect.addEventListener("change", () => {
-        state.tafsir = tafsirSelect.value;
+      bookSelect.addEventListener("change", () => {
+        state.book = bookSelect.value;
         loadData(true);
       });
       applyModeLockForFilter();
@@ -1065,11 +1065,11 @@
         setStatus("Connecting…");
         try {
           const health = await fetchJSON(`${API_BASE}/health`);
-          if (Array.isArray(health.available_tafsirs)) {
-            state.availableTafsirs = health.available_tafsirs;
-            setTafsirOptions(health.available_tafsirs, health.default_tafsir);
+          if (Array.isArray(health.available_books)) {
+            state.availableBooks = health.available_books;
+            setTafsirOptions(health.available_books, health.default_book);
           }
-          if (!state.tafsir) state.tafsir = health.default_tafsir || "";
+          if (!state.book) state.book = health.default_book || "";
           setStatus("Ready");
           await loadData(true);
         } catch (err) {

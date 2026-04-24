@@ -10,7 +10,7 @@ from loguru import logger
 
 from .env import REPO_ROOT
 
-LOG_DIR = REPO_ROOT / "tools" / "tafsir_gui" / "logs"
+LOG_DIR = REPO_ROOT / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_PATH = LOG_DIR / "gui.log"
 

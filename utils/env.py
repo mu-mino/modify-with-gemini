@@ -13,7 +13,7 @@ from typing import Dict, Optional
 
 from dotenv import load_dotenv
 
-REPO_MARKERS = {".git", "README.md", "Tafsir"}
+REPO_MARKERS = {".git", "README.md"}
 
 
 def find_repo_root(start: Optional[Path] = None) -> Path:
